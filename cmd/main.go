@@ -5,7 +5,5 @@ import (
 )
 
 func main() {
-	// w := watcher.New()
-	// w.Add("~/.zshrc")
-	// w.Run(2000)
+	w := watcher.New()
 }

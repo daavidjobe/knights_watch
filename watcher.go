@@ -10,7 +10,7 @@ import (
 
 //TODO: Add documentation
 
-// Watcher The main struct
+// Watcher represents the watcher
 type Watcher struct {
 	Event     chan Event
 	Error     chan error
@@ -22,7 +22,7 @@ type Watcher struct {
 	mu        *sync.Mutex
 }
 
-// New Creates a new Watcher instance
+// New creates a new Watcher instance
 func New() *Watcher {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -36,7 +36,7 @@ func New() *Watcher {
 	}
 }
 
-// Add Adds a file or folder to watch
+// Add adds a file or folder to watch
 func (w *Watcher) Add(filename string) (err error) {
 	w.lock()
 	filename, _ = filepath.Abs(filename) // Ignore the error. We catch it later
@@ -66,7 +66,7 @@ func (w *Watcher) Remove(filename string) (err error) {
 	return nil
 }
 
-// Run This method runs the program and polls changes with a specified interval
+// Run this method runs the program and polls changes with a specified interval
 func (w *Watcher) Run(d time.Duration) error {
 	// Return an error if d is less than 1 nanosecond.
 	if d < time.Nanosecond {
@@ -83,18 +83,9 @@ func (w *Watcher) Run(d time.Duration) error {
 	w.unlock()
 	w.wait()
 	for {
-		// done lets the inner polling cycle loop know when the
-		// current cycle's method has finished executing.
 		done := make(chan struct{})
-
-		// Any events that are found are first piped to evt before
-		// being sent to the main Event channel.
 		event := make(chan Event)
-
-		// Retrieve the file list for all watched file's and dirs.
 		fileList := w.fetchList()
-
-		// cancel can be used to cancel the current event polling function.
 		cancel := make(chan struct{})
 
 		// Look for events.
@@ -106,7 +97,6 @@ func (w *Watcher) Run(d time.Duration) error {
 	inner:
 		for {
 			select {
-
 			case event := <-event:
 				if len(w.events) > 0 {
 					_, found := w.events[event.EventType]
@@ -119,13 +109,10 @@ func (w *Watcher) Run(d time.Duration) error {
 				break inner
 			}
 		}
-
 		// Update the file's list.
 		w.lock()
 		w.files = fileList
 		w.unlock()
-
-		// Sleep and then continue to the next loop iteration.
 		time.Sleep(d)
 	}
 }

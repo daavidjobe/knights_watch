@@ -37,6 +37,13 @@ func TestRemoveFile(t *testing.T) {
 	checkListSize(t, w, 0)
 }
 
+func TestRun(t *testing.T) {
+	w := New()
+	w.Add("./watcher.go")
+	w.Run(100)
+	t.Fatal("Run is not tested")
+}
+
 func checkListSize(t *testing.T, w *Watcher, expected int) {
 	fileCount := len(w.files)
 	watchCount := len(w.watchList)
