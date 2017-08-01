@@ -1,6 +1,6 @@
 # Knights Watch
 
-Simple tool to run your tasks when changes occur to files and directories.
+Simple tool that lets you run do stuff when changes occur to files and directories.
 
 ## Roadmap
 * Command-line flags
