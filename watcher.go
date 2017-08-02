@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-//TODO: Add documentation
-
 // Watcher represents the watcher
 type Watcher struct {
 	Event     chan Event
 	Error     chan error
+	Closed    chan struct{}
+	close     chan struct{}
 	files     map[string]os.FileInfo
 	watchList map[string]bool
 	running   bool
@@ -117,6 +117,28 @@ func (w *Watcher) Run(d time.Duration) error {
 	}
 }
 
+// FileList return the list with watched files
+func (w *Watcher) FileList() map[string]os.FileInfo {
+	w.lock()
+	defer w.unlock()
+	return w.files
+}
+
+// Close performs cleanup on the watcher instance
+func (w *Watcher) Close() {
+	w.mu.Lock()
+	if !w.running {
+		w.mu.Unlock()
+		return
+	}
+	w.running = false
+	w.files = make(map[string]os.FileInfo)
+	w.watchList = make(map[string]bool)
+	w.mu.Unlock()
+	// Send a close signal to the Run method.
+	w.close <- struct{}{}
+}
+
 func (w *Watcher) list(filename string) (map[string]os.FileInfo, error) {
 	fileList := make(map[string]os.FileInfo)
 
@@ -132,8 +154,8 @@ func (w *Watcher) list(filename string) (map[string]os.FileInfo, error) {
 func (w *Watcher) pollEvents(files map[string]os.FileInfo,
 	event chan Event,
 	cancel chan struct{}) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.lock()
+	defer w.unlock()
 	creates := make(map[string]os.FileInfo)
 	removes := make(map[string]os.FileInfo)
 
@@ -143,6 +165,7 @@ func (w *Watcher) pollEvents(files map[string]os.FileInfo,
 			removes[path] = info
 		}
 	}
+
 	// Get all "Creates" & "Chmods"
 	for path, info := range files {
 		oldInfo, found := w.files[path]
@@ -213,8 +236,8 @@ func (w *Watcher) fetchList() map[string]os.FileInfo {
 		}
 	}
 	// Add the file's to the file list.
-	for k, v := range list {
-		files[k] = v
+	for key, value := range list {
+		files[key] = value
 	}
 	return files
 }

@@ -14,7 +14,7 @@ func TestAddFile(t *testing.T) {
 		t.Fatal("Added missing file without complaints")
 	}
 	var expectedExist error
-	actualExist := w.Add("./watcher.go")
+	actualExist := w.Add("watcher.go")
 	if actualExist != expectedExist {
 		t.Fatal("Existing file could not be added")
 	}
@@ -23,7 +23,7 @@ func TestAddFile(t *testing.T) {
 
 func TestRemoveFile(t *testing.T) {
 	w := New()
-	w.Add("./watcher.go")
+	w.Add("watcher.go")
 	expectedMissing := &os.PathError{}
 	actualMissing := w.Remove("asd")
 	if reflect.TypeOf(actualMissing) != reflect.TypeOf(expectedMissing) {
@@ -35,13 +35,6 @@ func TestRemoveFile(t *testing.T) {
 		t.Fatal("Existing file could not be removed")
 	}
 	checkListSize(t, w, 0)
-}
-
-func TestRun(t *testing.T) {
-	w := New()
-	w.Add("./watcher.go")
-	w.Run(100)
-	t.Fatal("Run is not tested")
 }
 
 func checkListSize(t *testing.T, w *Watcher, expected int) {

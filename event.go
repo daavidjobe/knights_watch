@@ -44,5 +44,5 @@ func (e Event) Describe() (string, error) {
 	if e.FileInfo != nil {
 		return fmt.Sprintf("%s -> %s", eventTypes[e.EventType], e.Path), nil
 	}
-	return "", ErrFileMissing
+	return "?", ErrFileMissing
 }
