@@ -10,16 +10,16 @@ import (
 
 // Watcher represents the watcher
 type Watcher struct {
-	Event     chan Event
-	Error     chan error
-	Closed    chan struct{}
-	close     chan struct{}
-	files     map[string]os.FileInfo
-	watchList map[string]bool
-	running   bool
-	events    map[EventType]struct{}
-	waitGroup *sync.WaitGroup
-	mu        *sync.Mutex
+	Event         chan Event
+	Error         chan error
+	Closed        chan struct{}
+	close         chan struct{}
+	files         map[string]os.FileInfo
+	watchList     map[string]bool
+	running       bool
+	events        map[EventType]struct{}
+	waitGroup     *sync.WaitGroup
+	exclusionLock *sync.Mutex
 }
 
 // New creates a new Watcher instance
@@ -27,12 +27,12 @@ func New() *Watcher {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	return &Watcher{
-		Event:     make(chan Event),
-		Error:     make(chan error),
-		mu:        new(sync.Mutex),
-		waitGroup: &wg,
-		files:     make(map[string]os.FileInfo),
-		watchList: make(map[string]bool),
+		Event:         make(chan Event),
+		Error:         make(chan error),
+		exclusionLock: new(sync.Mutex),
+		waitGroup:     &wg,
+		files:         make(map[string]os.FileInfo),
+		watchList:     make(map[string]bool),
 	}
 }
 
@@ -126,15 +126,15 @@ func (w *Watcher) FileList() map[string]os.FileInfo {
 
 // Close performs cleanup on the watcher instance
 func (w *Watcher) Close() {
-	w.mu.Lock()
+	w.lock()
 	if !w.running {
-		w.mu.Unlock()
+		w.unlock()
 		return
 	}
 	w.running = false
 	w.files = make(map[string]os.FileInfo)
 	w.watchList = make(map[string]bool)
-	w.mu.Unlock()
+	w.unlock()
 	// Send a close signal to the Run method.
 	w.close <- struct{}{}
 }
@@ -166,13 +166,14 @@ func (w *Watcher) pollEvents(files map[string]os.FileInfo,
 		}
 	}
 
-	// Get all "Creates" & "Chmods"
 	for path, info := range files {
 		oldInfo, found := w.files[path]
+		// If the file does not exist in the old list we add it
 		if !found {
 			creates[path] = info
 			continue
 		}
+		// Get all "Writes"
 		if oldInfo.ModTime() != info.ModTime() {
 			select {
 			case <-cancel:
@@ -180,6 +181,7 @@ func (w *Watcher) pollEvents(files map[string]os.FileInfo,
 			case event <- Event{Write, path, info}:
 			}
 		}
+		// Get all "Chmods"
 		if oldInfo.Mode() != info.Mode() {
 			select {
 			case <-cancel:
@@ -247,9 +249,9 @@ func (w *Watcher) wait() {
 }
 
 func (w *Watcher) lock() {
-	w.mu.Lock()
+	w.exclusionLock.Lock()
 }
 
 func (w *Watcher) unlock() {
-	w.mu.Unlock()
+	w.exclusionLock.Unlock()
 }
